@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HV Soluções — Remodelações & Construções</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- NAV -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <img src="logopng.PNG" alt="HV Soluções"/>
+    <div class="nav-logo-text">HV Soluções<span>Remodelações &amp; Construções</span></div>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#servicos">Serviços</a></li>
+    <li><a href="#projetos">Projetos</a></li>
+    <li><a href="#processo">Processo</a></li>
+    <li><a href="#contacto">Contacto</a></li>
+  </ul>
+  <a href="#contacto" class="nav-cta">Pedir Orçamento</a>
+  <div class="burger" onclick="document.getElementById('mm').classList.toggle('open')">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+<div class="mobile-menu" id="mm">
+  <a href="#servicos" onclick="this.closest('#mm').classList.remove('open')">Serviços</a>
+  <a href="#projetos" onclick="this.closest('#mm').classList.remove('open')">Projetos</a>
+  <a href="#processo" onclick="this.closest('#mm').classList.remove('open')">Processo</a>
+  <a href="#contacto" onclick="this.closest('#mm').classList.remove('open')">Contacto</a>
+  <a href="#contacto" class="gold" onclick="this.closest('#mm').classList.remove('open')">Pedir Orçamento →</a>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-tag">Remodelações em Portugal</div>
+      <h1>Transformamos<br>espaços em<br><em>obras-primas</em></h1>
+      <p class="hero-desc">Da conceção à entrega final, a HV Soluções oferece serviços completos de remodelação, construção civil e renovação de interiores com qualidade e rigor reconhecidos na Região Centro.</p>
+      <div class="hero-btns">
+        <a href="#projetos" class="btn-gold">Ver Projetos</a>
+        <a href="#contacto" class="btn-outline">Pedir Orçamento</a>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-logo-box">
+        <img src="logopng.PNG" alt="HV Soluções Logo"/>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-num">+100</div><div class="stat-lbl">Projetos concluídos</div></div>
+        <div class="stat-box"><div class="stat-num">+10</div><div class="stat-lbl">Anos de experiência</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-num">100%</div><div class="stat-lbl">Satisfação garantida</div></div>
+        <div class="stat-box"><div class="stat-num">PT</div><div class="stat-lbl">Região: <br>Distrito de Coimbra <br>Distrito de Leiria <br>Distrito de Lisboa<br></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVIÇOS -->
+<section class="section" id="servicos">
+  <div class="s-inner">
+    <div class="fu">
+      <div class="s-tag">O que fazemos</div>
+      <h2>Serviços <em>completos</em><br>de remodelação</h2>
+      <p class="s-sub">Desde pequenas renovações até grandes obras de construção civil, cobrimos todas as etapas do seu projeto.</p>
+    </div>
+    <div class="svc-grid fu" style="transition-delay:.1s">
+      <div class="svc-card">
+        <div class="svc-num">01</div>
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <div class="svc-name">Remodelações Gerais</div>
+        <p class="svc-desc">Transformação completa de espaços interiores e exteriores com materiais de qualidade e acabamentos impecáveis.</p>
+        <ul class="svc-list"><li>Paredes e tetos</li><li>Pavimentos e revestimentos</li><li>Pintura interior e exterior</li><li>Isolamentos e impermeabilizações</li></ul>
+      </div>
+      <div class="svc-card">
+        <div class="svc-num">02</div>
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg></div>
+        <div class="svc-name">Cozinhas &amp; Casas de Banho</div>
+        <p class="svc-desc">Renovação total com soluções personalizadas, do projeto à instalação final, com os melhores materiais.</p>
+        <ul class="svc-list"><li>Design e planeamento</li><li>Canalizações e instalações</li><li>Azulejos e mosaicos</li><li>Móveis e equipamentos</li></ul>
+      </div>
+      <div class="svc-card">
+        <div class="svc-num">03</div>
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div>
+        <div class="svc-name">Obras &amp; Construção Civil</div>
+        <p class="svc-desc">Execução de obras estruturais e novas construções com rigor técnico e cumprimento de prazos.</p>
+        <ul class="svc-list"><li>Ampliações e alterações</li><li>Estruturas e betão</li><li>Coberturas e telhados</li><li>Licenciamentos e projetos</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROJETOS ANTES & DEPOIS -->
+<section class="section" id="projetos">
+  <div class="s-inner">
+    <div class="fu">
+      <div class="s-tag">Os nossos trabalhos</div>
+      <h2 class="light">Antes <em>&amp; Depois</em></h2>
+      <p class="s-sub light">Arraste o divisor dourado para comparar o estado anterior e o resultado final dos nossos projetos.</p>
+    </div>
+    <div class="filter-bar fu" style="transition-delay:.1s">
+      <button class="filter-btn active" onclick="filterP('todos',this)">Todos</button>
+      <button class="filter-btn" onclick="filterP('cozinha',this)">Cozinhas</button>
+      <button class="filter-btn" onclick="filterP('banho',this)">Casas de Banho</button>
+      <button class="filter-btn" onclick="filterP('sala',this)">Salas</button>
+      <button class="filter-btn" onclick="filterP('exterior',this)">Exterior</button>
+    </div>
+    <div class="proj-grid fu" id="pgrid" style="transition-delay:.2s">
+
+      <!-- Card demo 1 -->
+<div class="proj-card" data-cat="banho">
+  <div class="proj-head">
+    <span class="proj-title">Casa de Banho</span>
+    <span class="proj-badge">Casa de Banho</span>
+  </div>
+  
+  <div class="ba-wrap" id="ba0">
+    <div class="ba-after-layer">
+      <img src="banho1.JPG" class="ba-img-el" alt="Depois">
+    </div>
+
+    <div class="ba-before-layer" id="bbl0" style="width:50%">
+      <div class="ba-before-inner">
+        <img src="banho1.1.JPG" class="ba-img-el" alt="Antes">
+      </div>
+    </div>
+
+    <div class="ba-lbl lbl-before">Antes</div>
+    <div class="ba-lbl lbl-after">Depois</div>
+    <div class="ba-line" id="bal0"></div>
+    <div class="ba-knob" id="bak0">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M8 12H16M8 12L5 9M8 12L5 15M16 12L19 9M16 12L19 15"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="proj-foot">
+    <div class="proj-foot-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      3 semanas
+    </div>
+    <div class="proj-foot-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Coimbra
+    </div>
+  </div>
+</div>
+
+      <!-- Card demo 2 -->
+      <div class="proj-card" data-cat="banho">
+        <div class="proj-head"><span class="proj-title">Casa de Banho</span><span class="proj-badge">Casa de Banho</span></div>
+        <div class="ba-wrap" id="ba1">
+          <div class="ba-after-layer"><div class="ph-box ph-a"><div class="ph-ico">✨</div><div class="ph-txt">Depois — adicione a sua foto</div></div></div>
+          <div class="ba-before-layer" id="bbl1" style="width:50%"><div class="ba-before-inner"><div class="ph-box ph-b"><div class="ph-ico">🏗️</div><div class="ph-txt">Antes — adicione a sua foto</div></div></div></div>
+          <div class="ba-lbl lbl-before">Antes</div><div class="ba-lbl lbl-after">Depois</div>
+          <div class="ba-line" id="bal1"></div>
+          <div class="ba-knob" id="bak1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 12H16M8 12L5 9M8 12L5 15M16 12L19 9M16 12L19 15"/></svg></div>
+        </div>
+        <div class="proj-foot">
+          <div class="proj-foot-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>2 semanas</div>
+          <div class="proj-foot-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Lousã</div>
+        </div>
+      </div>
+
+      <!-- Add new project -->
+      <div class="add-card" id="add-card" onclick="openModal()">
+        <div class="add-icon-box">+</div>
+        <div class="add-lbl">Adicionar Projeto</div>
+        <div class="add-sub">Carregue as fotos do antes e depois</div>
+      </div>
+    </div>
+  </div>
+</section>
+<!-- PROCESSO -->
+<section class="section" id="processo">
+  <div class="s-inner">
+    <div class="fu">
+      <div class="s-tag">Como trabalhamos</div>
+      <h2 class="light">O nosso <em>processo</em></h2>
+    </div>
+    <div class="proc-grid fu" style="transition-delay:.1s">
+      <div class="proc-step"><div class="p-dot"></div><div class="p-n">01 — Contacto</div><div class="p-t">Primeiro Contacto</div><p class="p-d">Recebemos o seu pedido e marcamos uma visita ao local para avaliar as necessidades do projeto.</p></div>
+      <div class="proc-step"><div class="p-dot"></div><div class="p-n">02 — Orçamento</div><div class="p-t">Proposta Detalhada</div><p class="p-d">Elaboramos um orçamento transparente com materiais, prazos e custos definidos, sem surpresas.</p></div>
+      <div class="proc-step"><div class="p-dot"></div><div class="p-n">03 — Execução</div><div class="p-t">Obra em Curso</div><p class="p-d">A nossa equipa executa os trabalhos com rigor, mantendo o espaço organizado e o cliente informado.</p></div>
+      <div class="proc-step"><div class="p-dot"></div><div class="p-n">04 — Entrega</div><div class="p-t">Entrega Final</div><p class="p-d">Entregamos o projeto concluído com garantia, prontos para resolver qualquer questão pós-obra.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACTO -->
+<section class="section" id="contacto">
+  <div class="s-inner">
+    <div class="fu">
+      <div class="s-tag">Fale connosco</div>
+      <h2 class="light">Peça o seu <em>orçamento</em></h2>
+      <p class="s-sub light">Descreva o seu projeto e entraremos em contacto em menos de 24 horas.</p>
+    </div>
+    <div class="ct-grid fu" style="transition-delay:.1s">
+      <div>
+        <p class="ct-desc">Estamos prontos para transformar o seu espaço. Preencha o formulário ou entre em contacto diretamente — respondemos rapidamente.</p>
+        <div class="ct-items">
+          <div class="ct-item">
+            <div class="ct-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.94-.94a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+            <div><div class="ct-lbl">Telefone</div><div class="ct-val">+351 910 547 546</div></div>
+          </div>
+          <div class="ct-item">
+            <div class="ct-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+            <div><div class="ct-lbl">Email</div><div class="ct-val">hvsolucoesgeral@gmail.com</div></div>
+          </div>
+          <div class="ct-item">
+            <div class="ct-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+            <div><div class="ct-lbl">Zona de atuação</div><div class="ct-val">Distrito de Coimbra <br>Distrito de Leiria <br>Distrito de Lisboa</div></div>
+          </div>
+          <div class="ct-item">
+            <div class="ct-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div><div class="ct-lbl">Horário</div><div class="ct-val">Seg–Sex: 9h–18h</div></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <form class="ct-form" id="cform" action="https://formsubmit.co/hvsolucoesgeral@gmail.com" method="POST" onsubmit="submitForm(event)">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_template" value="table">
+          
+          <div class="frow">
+            <div class="fg"><label>Nome *</label><input type="text" name="Nome" placeholder="O seu nome" required/></div>
+            <div class="fg"><label>Telefone *</label><input type="tel" name="Telefone" placeholder="+351 9XX XXX XXX" required/></div>
+          </div>
+          <div class="fg"><label>Email *</label><input type="email" name="Email" placeholder="email@exemplo.com" required/></div>
+          <div class="fg"><label>Tipo de obra</label>
+            <select name="Tipo_de_Obra">
+              <option value="" disabled selected>Selecione o tipo de projeto</option>
+              <option>Remodelação geral</option>
+              <option>Cozinha</option>
+              <option>Casa de banho</option>
+              <option>Construção civil / Ampliação</option>
+              <option>Pintura</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="fg"><label>Localização</label><input type="text" name="Localizacao" placeholder="Localidade / Concelho"/></div>
+          <div class="fg"><label>Descrição *</label><textarea name="Mensagem" rows="4" placeholder="Descreva o que pretende fazer..." required></textarea></div>
+          <button type="submit" class="btn-send">Enviar Pedido de Orçamento</button>
+        </form>
+
+        <div class="f-success" id="fsuccess" style="display:none">
+          <div class="fs-ico">✅</div>
+          <div class="fs-t">Pedido enviado com sucesso!</div>
+          <div class="fs-s">Entraremos em contacto em menos de 24 horas.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- FOOTER -->
+<footer>
+  <div class="ft-inner">
+    <div class="ft-logo">HV <span>Soluções</span></div>
+    <div class="ft-copy">© 2025 HV Soluções. Todos os direitos reservados.</div>
+    <div class="ft-links"><a href="#">Privacidade</a><a href="#servicos">Serviços</a><a href="#contacto">Contacto</a></div>
+  </div>
+</footer>
+
+<!-- MODAL ADICIONAR / EDITAR PROJETO -->
+<div class="modal-ov" id="modal">
+  <div class="modal-box">
+    <div class="modal-t" id="modal-title">Adicionar Projeto</div>
+    <div class="modal-s" id="modal-sub">Carregue a foto antes/depois e, se quiser, adicione fotos extra do projeto.</div>
+    <input type="hidden" id="peditid" value=""/>
+    <div class="mform">
+      <div class="mg"><label class="ml">Nome do projeto</label><input class="mi" id="pname" type="text" placeholder="Ex: Cozinha em Coimbra"/></div>
+      <div class="mg"><label class="ml">Localização</label><input class="mi" id="ploc" type="text" placeholder="Ex: Coimbra"/></div>
+      <div class="mg"><label class="ml">Duração da obra</label><input class="mi" id="pdur" type="text" placeholder="Ex: 3 semanas"/></div>
+      <div class="mg"><label class="ml">Categoria</label>
+        <select class="ms" id="pcat">
+          <option value="sala">Sala</option><option value="cozinha">Cozinha</option>
+          <option value="banho">Casa de Banho</option><option value="exterior">Exterior</option><option value="outros">Outros</option>
+        </select>
+      </div>
+      <div class="upload-row">
+        <div class="uz" id="uz-b"><input type="file" accept="image/*" onchange="prevImg(this,'b','uz-b')"/>
+          <div class="uz-ico">📷</div><div class="uz-lbl">Foto ANTES</div><div class="uz-sub">JPG, PNG, WEBP</div>
+        </div>
+        <div class="uz" id="uz-a"><input type="file" accept="image/*" onchange="prevImg(this,'a','uz-a')"/>
+          <div class="uz-ico">✨</div><div class="uz-lbl">Foto DEPOIS</div><div class="uz-sub">JPG, PNG, WEBP</div>
+        </div>
+      </div>
+      <div class="mg">
+        <label class="ml">Fotos extra (opcional — até 6 fotos)</label>
+        <div class="extra-upload-area" id="extra-upload-area">
+          <div class="uz uz-extra" id="uz-extra-add">
+            <input type="file" accept="image/*" multiple onchange="addExtraImgs(this)"/>
+            <div class="uz-ico">🖼️</div>
+            <div class="uz-lbl">Adicionar fotos</div>
+            <div class="uz-sub">Pode selecionar várias</div>
+          </div>
+        </div>
+        <div class="extra-thumbs" id="extra-thumbs"></div>
+      </div>
+      <div class="mbtn-row">
+        <button class="mbtn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="mbtn-save" id="mbtn-save" onclick="saveProj()">Adicionar ao Site</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- LIGHTBOX -->
+<div class="lightbox-ov" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="foto" onclick="event.stopPropagation()"/>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
