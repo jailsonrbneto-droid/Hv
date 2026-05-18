@@ -9,7 +9,7 @@
 const GITHUB_USER = 'jailsonrbneto-droid';
 const GITHUB_REPO = 'Hv';
 const GITHUB_BRANCH = 'main';
-const ADMIN_PASSWORD = 'hv2025'; // ← muda esta senha!
+const ADMIN_PASSWORD = '2103';
 
 const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/images/`;
 const API_URL  = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/images`;
