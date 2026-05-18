@@ -8,7 +8,6 @@ const ADMIN_PASSWORD = '2103';
 const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/images/`;
 const API_CONTENTS = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents`;
 
-// Token guardado na sessão (nunca vai para o código público)
 let _ghToken = sessionStorage.getItem('gh_token') || '';
 
 /* ── Categorias ────────────────────────────────────────────── */
