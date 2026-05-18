@@ -1,5 +1,3 @@
-
-
 const GITHUB_USER   = 'jailsonrbneto-droid';
 const GITHUB_REPO   = 'Hv';
 const GITHUB_BRANCH = 'main';
@@ -8,6 +6,7 @@ const ADMIN_PASSWORD = '2103';
 const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/images/`;
 const API_CONTENTS = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents`;
 
+// Token guardado na sessão (nunca vai para o código público)
 let _ghToken = sessionStorage.getItem('gh_token') || '';
 
 /* ── Categorias ────────────────────────────────────────────── */
@@ -464,7 +463,12 @@ function initFU() {
 }
 
 /* ── Init ──────────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
+  // Ativa modo admin via URL secreto: ?admin=2103
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("admin") === ADMIN_PASSWORD) {
+    document.body.classList.add("admin-mode");
+  }
   initStaticBA();
   loadProjects();
   initFU();
