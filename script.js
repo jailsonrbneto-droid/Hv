@@ -1,98 +1,108 @@
 
-const GITHUB_USER = 'jailsonrbneto-droid';
-const GITHUB_REPO = 'Hv';
+
+const GITHUB_USER   = 'jailsonrbneto-droid';
+const GITHUB_REPO   = 'Hv';
 const GITHUB_BRANCH = 'main';
 const ADMIN_PASSWORD = '2103';
 
 const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/images/`;
-const API_URL  = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/images`;
+const API_CONTENTS = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents`;
 
-/* ── Categorias por nome ───────────────────────────────────── */
-const CATEGORY_MAP = {
-  banho: 'banho', bathroom: 'banho', wc: 'banho',
-  cozinha: 'cozinha', kitchen: 'cozinha',
-  sala: 'sala', living: 'sala',
-  exterior: 'exterior', outside: 'exterior', fachada: 'exterior',
-};
+// Token guardado na sessão (nunca vai para o código público)
+let _ghToken = sessionStorage.getItem('gh_token') || '';
 
-function guessCategory(name) {
-  const n = name.toLowerCase();
-  for (const [key, cat] of Object.entries(CATEGORY_MAP)) {
-    if (n.includes(key)) return cat;
-  }
-  return 'outros';
-}
-
+/* ── Categorias ────────────────────────────────────────────── */
 function catLabel(cat) {
-  return { banho: 'Casa de Banho', cozinha: 'Cozinha', sala: 'Sala', exterior: 'Exterior', outros: 'Outros' }[cat] || 'Projeto';
+  return { banho: 'Casa de Banho', cozinha: 'Cozinha', sala: 'Sala', exterior: 'Exterior', outros: 'Outros' }[cat] || 'Outros';
 }
 
-/* ── Carrega e agrupa imagens do GitHub ────────────────────── */
+/* ── Carrega projetos do GitHub ────────────────────────────── */
 async function loadProjects() {
   const grid = document.getElementById('pgrid');
-
   try {
-    const res = await fetch(API_URL);
+    const res = await fetch(`${API_CONTENTS}/images`);
     if (!res.ok) throw new Error('GitHub API error');
     const files = await res.json();
 
-    // Filtra apenas imagens
+    // Carrega config de projetos se existir
+    let config = {};
+    try {
+      const cfgRes = await fetch(`https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/projetos.json`);
+      if (cfgRes.ok) {
+        const cfgContent = await cfgRes.json();
+        cfgContent.forEach(p => { config[p.id] = p; });
+      }
+    } catch(e) {}
+
+    // Filtra imagens
     const imgs = files.filter(f =>
       /\.(jpe?g|png|webp|gif)$/i.test(f.name) &&
       !/logo/i.test(f.name) &&
       !/^proj2/i.test(f.name)
     );
 
-    // Agrupa por prefixo (projeto1, projeto2, ...)
+    // Agrupa por prefixo
     const groups = {};
     imgs.forEach(f => {
-      const base = f.name.toLowerCase();
-      // extrai prefixo: tudo antes de -antes, -depois, -extra ou ponto
-      const match = base.match(/^([a-z0-9]+(?:-?[a-z]*\d*)?)-(antes|depois|extra)/i)
-                 || base.match(/^([a-z0-9]+(?:\d+))\./i);
+      const match = f.name.match(/^(projeto\d+)[-_](antes|depois|extra\d*)/i);
       if (!match) return;
-      const prefix = match[1].toLowerCase().replace(/[-_\s]+$/, '');
+      const prefix = match[1].toLowerCase();
       if (!groups[prefix]) groups[prefix] = { antes: null, depois: null, extras: [] };
-
-      if (/antes/i.test(f.name))       groups[prefix].antes = f.name;
-      else if (/depois/i.test(f.name)) groups[prefix].depois = f.name;
-      else if (/extra/i.test(f.name))  groups[prefix].extras.push(f.name);
+      const tipo = match[2].toLowerCase();
+      if (tipo === 'antes')        groups[prefix].antes = f.name;
+      else if (tipo === 'depois')  groups[prefix].depois = f.name;
+      else                         groups[prefix].extras.push(f.name);
     });
 
-    // Remove cards dinâmicos anteriores (mantém os estáticos do HTML)
+    // Ordena extras numericamente
+    Object.values(groups).forEach(g => {
+      g.extras.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    });
+
+    // Remove cards dinâmicos anteriores
     grid.querySelectorAll('.proj-card[data-dynamic]').forEach(c => c.remove());
 
-    // Renderiza cada grupo
     const addCard = document.getElementById('add-card');
-    let idx = 100; // índice para não colidir com os estáticos
+    let idx = 100;
 
-    Object.entries(groups).forEach(([prefix, data]) => {
+    // Ordena projetos numericamente
+    const sorted = Object.entries(groups).sort(([a],[b]) => {
+      return parseInt(a.replace('projeto','')) - parseInt(b.replace('projeto',''));
+    });
+
+    sorted.forEach(([prefix, data]) => {
       if (!data.antes && !data.depois) return;
-      const cat = guessCategory(prefix);
-      const card = buildCard(prefix, data, cat, idx);
+      const cfg = config[prefix] || {};
+      const cat = cfg.categoria || 'outros';
+      const card = buildCard(prefix, data, cat, cfg, idx);
       grid.insertBefore(card, addCard);
-      initBA(idx, data.antes, data.depois);
-      if (data.extras.length > 0) initCarousel(idx, data.extras);
+      initBADrag(idx);
       idx++;
     });
 
-    // Reinicia filtros e animações
-    filterP('todos', document.querySelector('.filter-btn.active') || document.querySelector('.filter-btn'));
+    filterP('todos', document.querySelector('.filter-btn.active'));
     initFU();
 
-  } catch (e) {
-    console.warn('Não foi possível carregar projetos do GitHub:', e);
+  } catch(e) {
+    console.warn('Erro ao carregar projetos:', e);
   }
 }
 
-/* ── Constrói card HTML ────────────────────────────────────── */
-function buildCard(prefix, data, cat, idx) {
+/* ── Constrói card ─────────────────────────────────────────── */
+function buildCard(prefix, data, cat, cfg, idx) {
   const card = document.createElement('div');
   card.className = 'proj-card';
   card.dataset.cat = cat;
   card.dataset.dynamic = '1';
+  card.dataset.prefix = prefix;
 
-  const title = prefix.charAt(0).toUpperCase() + prefix.slice(1).replace(/(\d+)/, ' $1');
+  const num   = prefix.replace('projeto','');
+  const title = cfg.nome     || `Projeto ${num}`;
+  const local = cfg.local    || '';
+  const dur   = cfg.duracao  || '';
+
+  const afterSrc  = data.depois ? RAW_BASE + encodeURIComponent(data.depois) : '';
+  const beforeSrc = data.antes  ? RAW_BASE + encodeURIComponent(data.antes)  : '';
 
   card.innerHTML = `
     <div class="proj-head">
@@ -101,13 +111,15 @@ function buildCard(prefix, data, cat, idx) {
     </div>
     <div class="ba-wrap" id="ba${idx}">
       <div class="ba-after-layer">
-        <img src="" class="ba-img-el" id="ba-after-img${idx}" alt="Depois" style="display:none">
-        <div class="ph-box ph-a" id="ba-after-ph${idx}"><div class="ph-ico">✨</div><div class="ph-txt">Depois</div></div>
+        ${afterSrc
+          ? `<img src="${afterSrc}" class="ba-img-el" alt="Depois" onclick="openLightbox(this.src)">`
+          : `<div class="ph-box ph-a"><div class="ph-ico">✨</div><div class="ph-txt">Depois</div></div>`}
       </div>
       <div class="ba-before-layer" id="bbl${idx}" style="width:50%">
         <div class="ba-before-inner">
-          <img src="" class="ba-img-el" id="ba-before-img${idx}" alt="Antes" style="display:none">
-          <div class="ph-box ph-b" id="ba-before-ph${idx}"><div class="ph-ico">🏗️</div><div class="ph-txt">Antes</div></div>
+          ${beforeSrc
+            ? `<img src="${beforeSrc}" class="ba-img-el" alt="Antes" onclick="openLightbox(this.src)">`
+            : `<div class="ph-box ph-b"><div class="ph-ico">🏗️</div><div class="ph-txt">Antes</div></div>`}
         </div>
       </div>
       <div class="ba-lbl lbl-before">Antes</div>
@@ -121,14 +133,12 @@ function buildCard(prefix, data, cat, idx) {
     </div>
     ${data.extras.length > 0 ? buildCarouselHTML(idx, data.extras) : ''}
     <div class="proj-foot">
-      <div class="proj-foot-item">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        Portugal
-      </div>
+      ${dur   ? `<div class="proj-foot-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${dur}</div>` : ''}
+      ${local ? `<div class="proj-foot-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${local}</div>` : ''}
     </div>
     <div class="admin-btns">
       <button class="btn-edit-proj" onclick="editProj('${prefix}')">✏ Editar</button>
-      <button class="btn-remove-proj" onclick="removeProj(this)">✕ Remover</button>
+      <button class="btn-remove-proj" onclick="confirmRemove(this)">✕ Remover</button>
     </div>
   `;
   return card;
@@ -137,14 +147,13 @@ function buildCard(prefix, data, cat, idx) {
 /* ── Carrossel HTML ────────────────────────────────────────── */
 function buildCarouselHTML(idx, extras) {
   const slides = extras.map((f, i) =>
-    `<div class="cr-slide${i===0?' active':''}" data-ci="${i}">
+    `<div class="cr-slide${i===0?' active':''}">
       <img src="${RAW_BASE}${encodeURIComponent(f)}" alt="Extra ${i+1}" onclick="openLightbox(this.src)">
     </div>`
   ).join('');
   const dots = extras.map((_, i) =>
     `<div class="cr-dot${i===0?' active':''}" onclick="crGoto(${idx},${i})"></div>`
   ).join('');
-
   return `
     <div class="cr-wrap" id="cr${idx}">
       <div class="cr-label">Galeria do projeto</div>
@@ -155,36 +164,6 @@ function buildCarouselHTML(idx, extras) {
       </div>
       <div class="cr-dots">${dots}</div>
     </div>`;
-}
-
-/* ── Inicia slider BA com imagens do GitHub ────────────────── */
-function initBA(idx, antesFile, depoisFile) {
-  if (antesFile) {
-    const img = document.getElementById(`ba-before-img${idx}`);
-    const ph  = document.getElementById(`ba-before-ph${idx}`);
-    if (img) {
-      img.src = RAW_BASE + encodeURIComponent(antesFile);
-      img.style.display = 'block';
-      img.onclick = () => openLightbox(img.src);
-      if (ph) ph.style.display = 'none';
-    }
-  }
-  if (depoisFile) {
-    const img = document.getElementById(`ba-after-img${idx}`);
-    const ph  = document.getElementById(`ba-after-ph${idx}`);
-    if (img) {
-      img.src = RAW_BASE + encodeURIComponent(depoisFile);
-      img.style.display = 'block';
-      img.onclick = () => openLightbox(img.src);
-      if (ph) ph.style.display = 'none';
-    }
-  }
-  initBADrag(idx);
-}
-
-/* ── Inicia carrossel ──────────────────────────────────────── */
-function initCarousel(idx) {
-  // slides já têm src definido no HTML, nada extra necessário
 }
 
 /* ── Drag slider Antes/Depois ──────────────────────────────── */
@@ -201,12 +180,9 @@ function initBADrag(idx) {
     if (bal) bal.style.left = pct + '%';
     if (bak) bak.style.left = pct + '%';
   }
-
   function onMove(clientX) {
-    const r = wrap.getBoundingClientRect();
-    setPos(((clientX - r.left) / r.width) * 100);
+    setPos(((clientX - wrap.getBoundingClientRect().left) / wrap.offsetWidth) * 100);
   }
-
   wrap.addEventListener('mousedown', e => {
     if (e.target.classList.contains('ba-img-el')) return;
     const mm = e2 => onMove(e2.clientX);
@@ -215,7 +191,6 @@ function initBADrag(idx) {
     document.addEventListener('mouseup', mu);
     onMove(e.clientX);
   });
-
   wrap.addEventListener('touchstart', e => {
     const tm = e2 => onMove(e2.touches[0].clientX);
     const te = () => { wrap.removeEventListener('touchmove', tm); wrap.removeEventListener('touchend', te); };
@@ -225,72 +200,32 @@ function initBADrag(idx) {
   }, { passive: true });
 }
 
-/* ── Carrossel step / goto ─────────────────────────────────── */
+/* ── Remove cards estáticos vazios do HTML ─────────────────── */
+function initStaticBA() {
+  document.querySelectorAll('#pgrid .proj-card:not([data-dynamic])').forEach(c => c.remove());
+}
+
+/* ── Carrossel controls ────────────────────────────────────── */
 function crStep(idx, dir) {
   const cr = document.getElementById(`cr${idx}`);
   if (!cr) return;
   const slides = cr.querySelectorAll('.cr-slide');
   const dots   = cr.querySelectorAll('.cr-dot');
-  let current  = [...slides].findIndex(s => s.classList.contains('active'));
-  slides[current].classList.remove('active');
-  dots[current] && dots[current].classList.remove('active');
-  current = (current + dir + slides.length) % slides.length;
-  slides[current].classList.add('active');
-  dots[current] && dots[current].classList.add('active');
+  let cur = [...slides].findIndex(s => s.classList.contains('active'));
+  slides[cur].classList.remove('active');
+  dots[cur]?.classList.remove('active');
+  cur = (cur + dir + slides.length) % slides.length;
+  slides[cur].classList.add('active');
+  dots[cur]?.classList.add('active');
 }
-
 function crGoto(idx, i) {
   const cr = document.getElementById(`cr${idx}`);
   if (!cr) return;
-  const slides = cr.querySelectorAll('.cr-slide');
-  const dots   = cr.querySelectorAll('.cr-dot');
-  slides.forEach((s, n) => s.classList.toggle('active', n === i));
-  dots.forEach((d, n) => d.classList.toggle('active', n === i));
+  cr.querySelectorAll('.cr-slide').forEach((s,n) => s.classList.toggle('active', n===i));
+  cr.querySelectorAll('.cr-dot').forEach((d,n)   => d.classList.toggle('active', n===i));
 }
 
-/* ── Slider BA estático (cards originais do HTML) ──────────── */
-function initStaticBA() {
-  [0, 1].forEach(idx => {
-    const wrap = document.getElementById(`ba${idx}`);
-    const bbl  = document.getElementById(`bbl${idx}`);
-    const bal  = document.getElementById(`bal${idx}`);
-    const bak  = document.getElementById(`bak${idx}`);
-    if (!wrap || !bbl) return;
-
-    function setPos(pct) {
-      pct = Math.max(2, Math.min(98, pct));
-      bbl.style.width = pct + '%';
-      if (bal) bal.style.left = pct + '%';
-      if (bak) bak.style.left = pct + '%';
-    }
-    function onMove(clientX) {
-      const r = wrap.getBoundingClientRect();
-      setPos(((clientX - r.left) / r.width) * 100);
-    }
-    wrap.addEventListener('mousedown', e => {
-      if (e.target.classList.contains('ba-img-el')) return;
-      const mm = e2 => onMove(e2.clientX);
-      const mu = () => { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
-      document.addEventListener('mousemove', mm);
-      document.addEventListener('mouseup', mu);
-      onMove(e.clientX);
-    });
-    wrap.addEventListener('touchstart', e => {
-      const tm = e2 => onMove(e2.touches[0].clientX);
-      const te = () => { wrap.removeEventListener('touchmove', tm); wrap.removeEventListener('touchend', te); };
-      wrap.addEventListener('touchmove', tm, { passive: true });
-      wrap.addEventListener('touchend', te);
-      onMove(e.touches[0].clientX);
-    }, { passive: true });
-
-    // Lightbox nas imagens estáticas
-    wrap.querySelectorAll('.ba-img-el').forEach(img => {
-      img.addEventListener('click', () => { if (img.src) openLightbox(img.src); });
-    });
-  });
-}
-
-/* ── Filtro de categorias ──────────────────────────────────── */
+/* ── Filtro ────────────────────────────────────────────────── */
 function filterP(cat, btn) {
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
@@ -308,51 +243,68 @@ function openLightbox(src) {
   ov.classList.add('open');
 }
 function closeLightbox() {
-  const ov = document.getElementById('lightbox');
-  if (ov) ov.classList.remove('open');
+  document.getElementById('lightbox')?.classList.remove('open');
 }
 
-/* ── Modal admin ───────────────────────────────────────────── */
+/* ── Modal Admin ───────────────────────────────────────────── */
 function openModal() {
   if (!document.body.classList.contains('admin-mode')) {
     const pw = prompt('Senha de administrador:');
     if (pw !== ADMIN_PASSWORD) { alert('Senha incorreta.'); return; }
     document.body.classList.add('admin-mode');
   }
+  if (!_ghToken) {
+    const t = prompt('Introduz o teu GitHub Token (começa com ghp_):');
+    if (!t) return;
+    _ghToken = t.trim();
+    sessionStorage.setItem('gh_token', _ghToken);
+  }
+  // Reset form
+  _extraFiles = [];
+  document.getElementById('extra-thumbs').innerHTML = '';
+  document.getElementById('pname').value = '';
+  document.getElementById('ploc').value = '';
+  document.getElementById('pdur').value = '';
+  document.getElementById('pcat').value = 'banho';
+  document.getElementById('uz-b').innerHTML = `<input type="file" accept="image/*" onchange="prevImg(this,'b','uz-b')"/><div class="uz-ico">📷</div><div class="uz-lbl">Foto ANTES</div><div class="uz-sub">JPG, PNG, WEBP</div>`;
+  document.getElementById('uz-a').innerHTML = `<input type="file" accept="image/*" onchange="prevImg(this,'a','uz-a')"/><div class="uz-ico">✨</div><div class="uz-lbl">Foto DEPOIS</div><div class="uz-sub">JPG, PNG, WEBP</div>`;
+  window._beforeFile = null;
+  window._afterFile  = null;
   document.getElementById('modal').classList.add('open');
 }
 function closeModal() {
-  document.getElementById('modal').classList.remove('open');
+  document.getElementById('modal')?.classList.remove('open');
 }
 
-// Previsualiza imagem no modal
+/* ── Preview imagem no modal ───────────────────────────────── */
 function prevImg(input, slot, uzId) {
   const file = input.files[0];
   if (!file) return;
+  if (slot === 'b') window._beforeFile = file;
+  if (slot === 'a') window._afterFile  = file;
   const reader = new FileReader();
   reader.onload = e => {
     const uz = document.getElementById(uzId);
     uz.classList.add('done');
-    uz.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;"/>`;
-    uz.dataset[slot] = e.target.result;
+    uz.style.padding = '0';
+    uz.style.overflow = 'hidden';
+    uz.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;display:block;"/>`;
   };
   reader.readAsDataURL(file);
-  if (slot === 'b') window._beforeDataUrl = URL.createObjectURL(file);
-  if (slot === 'a') window._afterDataUrl  = URL.createObjectURL(file);
 }
 
-// Fotos extra no modal
+/* ── Fotos extra ───────────────────────────────────────────── */
 let _extraFiles = [];
 function addExtraImgs(input) {
   const thumbs = document.getElementById('extra-thumbs');
   Array.from(input.files).forEach(file => {
-    if (_extraFiles.length >= 6) return;
+    if (_extraFiles.length >= 7) return;
+    const idx = _extraFiles.length;
     _extraFiles.push(file);
     const reader = new FileReader();
     reader.onload = e => {
       const div = document.createElement('div');
       div.className = 'extra-thumb';
-      const idx = _extraFiles.length - 1;
       div.innerHTML = `<img src="${e.target.result}"><button class="extra-thumb-rm" onclick="removeExtra(${idx},this)">✕</button>`;
       thumbs.appendChild(div);
     };
@@ -364,41 +316,152 @@ function removeExtra(idx, btn) {
   btn.closest('.extra-thumb').remove();
 }
 
-// Guarda projeto (apenas localmente na sessão — para guardar permanentemente precisa do GitHub)
-function saveProj() {
-  alert('Para guardar permanentemente, faz upload das fotos para a pasta images/ do GitHub com o nome:\nprojetoX-antes.JPG\nprojetoX-depois.JPG\nprojetoX-extra1.JPG\n\nO site carrega automaticamente ao abrir.');
-  closeModal();
+/* ── Upload ficheiro para GitHub ───────────────────────────── */
+async function uploadToGitHub(path, file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      const base64 = e.target.result.split(',')[1];
+      let sha = undefined;
+      try {
+        const check = await fetch(`${API_CONTENTS}/${path}`, {
+          headers: { 'Authorization': `token ${_ghToken}` }
+        });
+        if (check.ok) { const d = await check.json(); sha = d.sha; }
+      } catch(e) {}
+
+      const body = { message: `Upload: ${path}`, content: base64, branch: GITHUB_BRANCH };
+      if (sha) body.sha = sha;
+
+      const res = await fetch(`${API_CONTENTS}/${path}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `token ${_ghToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) resolve();
+      else reject(await res.text());
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
+/* ── Guarda config do projeto ──────────────────────────────── */
+async function saveConfig(prefix, cat, nome, local, duracao) {
+  let configs = [];
+  let sha = undefined;
+  try {
+    const res = await fetch(`${API_CONTENTS}/projetos.json`, {
+      headers: { 'Authorization': `token ${_ghToken}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      sha = data.sha;
+      configs = JSON.parse(atob(data.content.replace(/\n/g,'')));
+    }
+  } catch(e) {}
+
+  const existing = configs.findIndex(c => c.id === prefix);
+  const entry = { id: prefix, nome, categoria: cat, local, duracao };
+  if (existing >= 0) configs[existing] = entry;
+  else configs.push(entry);
+
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(configs, null, 2))));
+  const body = { message: 'Atualiza projetos.json', content, branch: GITHUB_BRANCH };
+  if (sha) body.sha = sha;
+
+  await fetch(`${API_CONTENTS}/projetos.json`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `token ${_ghToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+/* ── Guarda projeto completo ───────────────────────────────── */
+async function saveProj() {
+  const nome    = document.getElementById('pname').value.trim();
+  const local   = document.getElementById('ploc').value.trim();
+  const duracao = document.getElementById('pdur').value.trim();
+  const cat     = document.getElementById('pcat').value;
+
+  if (!window._beforeFile && !window._afterFile) {
+    alert('Adiciona pelo menos uma foto (antes ou depois).');
+    return;
+  }
+
+  const btn = document.getElementById('mbtn-save');
+  btn.textContent = 'A guardar...';
+  btn.disabled = true;
+
+  try {
+    // Determina próximo número
+    const res = await fetch(`${API_CONTENTS}/images`);
+    const files = await res.json();
+    const nums = files
+      .map(f => { const m = f.name.match(/^projeto(\d+)/i); return m ? parseInt(m[1]) : 0; })
+      .filter(n => n > 0);
+    const nextNum = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+    const prefix = `projeto${nextNum}`;
+
+    if (window._beforeFile) await uploadToGitHub(`images/${prefix}-antes.JPG`, window._beforeFile);
+    if (window._afterFile)  await uploadToGitHub(`images/${prefix}-depois.JPG`, window._afterFile);
+    for (let i = 0; i < _extraFiles.length; i++) {
+      await uploadToGitHub(`images/${prefix}-extra${i+1}.JPG`, _extraFiles[i]);
+    }
+
+    await saveConfig(prefix, cat, nome || `Projeto ${nextNum}`, local, duracao);
+
+    btn.textContent = '✅ Guardado!';
+    setTimeout(() => {
+      closeModal();
+      btn.textContent = 'Adicionar ao Site';
+      btn.disabled = false;
+      alert('Projeto guardado! O site atualiza em 1-2 minutos.');
+      loadProjects();
+    }, 1500);
+
+  } catch(e) {
+    alert('Erro ao guardar. Verifica o token e tenta novamente.\n' + e);
+    btn.textContent = 'Adicionar ao Site';
+    btn.disabled = false;
+  }
+}
+
+/* ── Editar / Remover ──────────────────────────────────────── */
 function editProj(prefix) {
-  alert(`Para editar o projeto "${prefix}", substitui as fotos na pasta images/ do GitHub.`);
+  alert(`Para editar "${prefix}", substitui as fotos na pasta images/ do GitHub com os mesmos nomes.`);
 }
-
-function removeProj(btn) {
-  if (!confirm('Remover este projeto da vista? (as fotos continuam no GitHub)')) return;
+function confirmRemove(btn) {
+  if (!confirm('Remover este projeto da vista?')) return;
   btn.closest('.proj-card').remove();
 }
 
-/* ── Formulário de contacto ────────────────────────────────── */
+/* ── Formulário contacto ───────────────────────────────────── */
 function submitForm(e) {
   e.preventDefault();
   const form    = document.getElementById('cform');
   const success = document.getElementById('fsuccess');
-  fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'Accept': 'application/json' } })
-    .then(r => {
-      if (r.ok) { form.style.display = 'none'; success.style.display = 'block'; }
-      else alert('Erro ao enviar. Tente novamente.');
-    })
-    .catch(() => alert('Erro de rede. Tente novamente.'));
+  fetch(form.action, {
+    method: 'POST',
+    body: new FormData(form),
+    headers: { 'Accept': 'application/json' }
+  }).then(r => {
+    if (r.ok) { form.style.display = 'none'; success.style.display = 'block'; }
+    else alert('Erro ao enviar. Tente novamente.');
+  }).catch(() => alert('Erro de rede. Tente novamente.'));
 }
 
 /* ── Fade-in ao scroll ─────────────────────────────────────── */
 function initFU() {
-  const els = document.querySelectorAll('.fu');
   const obs = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); } });
-  }, { threshold: 0.12 });
-  els.forEach(el => obs.observe(el));
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fu').forEach(el => obs.observe(el));
 }
 
 /* ── Init ──────────────────────────────────────────────────── */
@@ -406,7 +469,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initStaticBA();
   loadProjects();
   initFU();
-
-  // Fechar lightbox com ESC
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 });
