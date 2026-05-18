@@ -1,412 +1,412 @@
 
-  /* =====================================================
-     SUPABASE CONFIG
-  ===================================================== */
-  const SUPA_URL = 'https://zrmotbpzachazbcydudn.supabase.co';
-  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpybW90YnB6YWNoYXpiY3lkdWRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MDYyMDAsImV4cCI6MjA5MjE4MjIwMH0.F43vpxE3igqbVuzYHHfp5fGUIZfmkMoqgtRpumhALkE';
+const GITHUB_USER = 'jailsonrbneto-droid';
+const GITHUB_REPO = 'Hv';
+const GITHUB_BRANCH = 'main';
+const ADMIN_PASSWORD = '2103';
 
-  async function supaFetch(method, path, body){
-    const res = await fetch(SUPA_URL + path, {
-      method,
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': method === 'POST' ? 'return=representation' : ''
-      },
-      body: body ? JSON.stringify(body) : undefined
+const RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/images/`;
+const API_URL  = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/images`;
+
+/* ── Categorias por nome ───────────────────────────────────── */
+const CATEGORY_MAP = {
+  banho: 'banho', bathroom: 'banho', wc: 'banho',
+  cozinha: 'cozinha', kitchen: 'cozinha',
+  sala: 'sala', living: 'sala',
+  exterior: 'exterior', outside: 'exterior', fachada: 'exterior',
+};
+
+function guessCategory(name) {
+  const n = name.toLowerCase();
+  for (const [key, cat] of Object.entries(CATEGORY_MAP)) {
+    if (n.includes(key)) return cat;
+  }
+  return 'outros';
+}
+
+function catLabel(cat) {
+  return { banho: 'Casa de Banho', cozinha: 'Cozinha', sala: 'Sala', exterior: 'Exterior', outros: 'Outros' }[cat] || 'Projeto';
+}
+
+/* ── Carrega e agrupa imagens do GitHub ────────────────────── */
+async function loadProjects() {
+  const grid = document.getElementById('pgrid');
+
+  try {
+    const res = await fetch(API_URL);
+    if (!res.ok) throw new Error('GitHub API error');
+    const files = await res.json();
+
+    // Filtra apenas imagens
+    const imgs = files.filter(f =>
+      /\.(jpe?g|png|webp|gif)$/i.test(f.name) &&
+      !/logo/i.test(f.name) &&
+      !/^proj2/i.test(f.name)
+    );
+
+    // Agrupa por prefixo (projeto1, projeto2, ...)
+    const groups = {};
+    imgs.forEach(f => {
+      const base = f.name.toLowerCase();
+      // extrai prefixo: tudo antes de -antes, -depois, -extra ou ponto
+      const match = base.match(/^([a-z0-9]+(?:-?[a-z]*\d*)?)-(antes|depois|extra)/i)
+                 || base.match(/^([a-z0-9]+(?:\d+))\./i);
+      if (!match) return;
+      const prefix = match[1].toLowerCase().replace(/[-_\s]+$/, '');
+      if (!groups[prefix]) groups[prefix] = { antes: null, depois: null, extras: [] };
+
+      if (/antes/i.test(f.name))       groups[prefix].antes = f.name;
+      else if (/depois/i.test(f.name)) groups[prefix].depois = f.name;
+      else if (/extra/i.test(f.name))  groups[prefix].extras.push(f.name);
     });
-    if(!res.ok){ const t=await res.text(); console.error('Supabase error:',t); return null; }
-    const text = await res.text();
-    return text ? JSON.parse(text) : null;
+
+    // Remove cards dinâmicos anteriores (mantém os estáticos do HTML)
+    grid.querySelectorAll('.proj-card[data-dynamic]').forEach(c => c.remove());
+
+    // Renderiza cada grupo
+    const addCard = document.getElementById('add-card');
+    let idx = 100; // índice para não colidir com os estáticos
+
+    Object.entries(groups).forEach(([prefix, data]) => {
+      if (!data.antes && !data.depois) return;
+      const cat = guessCategory(prefix);
+      const card = buildCard(prefix, data, cat, idx);
+      grid.insertBefore(card, addCard);
+      initBA(idx, data.antes, data.depois);
+      if (data.extras.length > 0) initCarousel(idx, data.extras);
+      idx++;
+    });
+
+    // Reinicia filtros e animações
+    filterP('todos', document.querySelector('.filter-btn.active') || document.querySelector('.filter-btn'));
+    initFU();
+
+  } catch (e) {
+    console.warn('Não foi possível carregar projetos do GitHub:', e);
+  }
+}
+
+/* ── Constrói card HTML ────────────────────────────────────── */
+function buildCard(prefix, data, cat, idx) {
+  const card = document.createElement('div');
+  card.className = 'proj-card';
+  card.dataset.cat = cat;
+  card.dataset.dynamic = '1';
+
+  const title = prefix.charAt(0).toUpperCase() + prefix.slice(1).replace(/(\d+)/, ' $1');
+
+  card.innerHTML = `
+    <div class="proj-head">
+      <span class="proj-title">${title}</span>
+      <span class="proj-badge">${catLabel(cat)}</span>
+    </div>
+    <div class="ba-wrap" id="ba${idx}">
+      <div class="ba-after-layer">
+        <img src="" class="ba-img-el" id="ba-after-img${idx}" alt="Depois" style="display:none">
+        <div class="ph-box ph-a" id="ba-after-ph${idx}"><div class="ph-ico">✨</div><div class="ph-txt">Depois</div></div>
+      </div>
+      <div class="ba-before-layer" id="bbl${idx}" style="width:50%">
+        <div class="ba-before-inner">
+          <img src="" class="ba-img-el" id="ba-before-img${idx}" alt="Antes" style="display:none">
+          <div class="ph-box ph-b" id="ba-before-ph${idx}"><div class="ph-ico">🏗️</div><div class="ph-txt">Antes</div></div>
+        </div>
+      </div>
+      <div class="ba-lbl lbl-before">Antes</div>
+      <div class="ba-lbl lbl-after">Depois</div>
+      <div class="ba-line" id="bal${idx}"></div>
+      <div class="ba-knob" id="bak${idx}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M8 12H16M8 12L5 9M8 12L5 15M16 12L19 9M16 12L19 15"/>
+        </svg>
+      </div>
+    </div>
+    ${data.extras.length > 0 ? buildCarouselHTML(idx, data.extras) : ''}
+    <div class="proj-foot">
+      <div class="proj-foot-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Portugal
+      </div>
+    </div>
+    <div class="admin-btns">
+      <button class="btn-edit-proj" onclick="editProj('${prefix}')">✏ Editar</button>
+      <button class="btn-remove-proj" onclick="removeProj(this)">✕ Remover</button>
+    </div>
+  `;
+  return card;
+}
+
+/* ── Carrossel HTML ────────────────────────────────────────── */
+function buildCarouselHTML(idx, extras) {
+  const slides = extras.map((f, i) =>
+    `<div class="cr-slide${i===0?' active':''}" data-ci="${i}">
+      <img src="${RAW_BASE}${encodeURIComponent(f)}" alt="Extra ${i+1}" onclick="openLightbox(this.src)">
+    </div>`
+  ).join('');
+  const dots = extras.map((_, i) =>
+    `<div class="cr-dot${i===0?' active':''}" onclick="crGoto(${idx},${i})"></div>`
+  ).join('');
+
+  return `
+    <div class="cr-wrap" id="cr${idx}">
+      <div class="cr-label">Galeria do projeto</div>
+      <div class="cr-track">
+        ${slides}
+        <button class="cr-btn cr-prev" onclick="crStep(${idx},-1)">&#8249;</button>
+        <button class="cr-btn cr-next" onclick="crStep(${idx},1)">&#8250;</button>
+      </div>
+      <div class="cr-dots">${dots}</div>
+    </div>`;
+}
+
+/* ── Inicia slider BA com imagens do GitHub ────────────────── */
+function initBA(idx, antesFile, depoisFile) {
+  if (antesFile) {
+    const img = document.getElementById(`ba-before-img${idx}`);
+    const ph  = document.getElementById(`ba-before-ph${idx}`);
+    if (img) {
+      img.src = RAW_BASE + encodeURIComponent(antesFile);
+      img.style.display = 'block';
+      img.onclick = () => openLightbox(img.src);
+      if (ph) ph.style.display = 'none';
+    }
+  }
+  if (depoisFile) {
+    const img = document.getElementById(`ba-after-img${idx}`);
+    const ph  = document.getElementById(`ba-after-ph${idx}`);
+    if (img) {
+      img.src = RAW_BASE + encodeURIComponent(depoisFile);
+      img.style.display = 'block';
+      img.onclick = () => openLightbox(img.src);
+      if (ph) ph.style.display = 'none';
+    }
+  }
+  initBADrag(idx);
+}
+
+/* ── Inicia carrossel ──────────────────────────────────────── */
+function initCarousel(idx) {
+  // slides já têm src definido no HTML, nada extra necessário
+}
+
+/* ── Drag slider Antes/Depois ──────────────────────────────── */
+function initBADrag(idx) {
+  const wrap = document.getElementById(`ba${idx}`);
+  const bbl  = document.getElementById(`bbl${idx}`);
+  const bal  = document.getElementById(`bal${idx}`);
+  const bak  = document.getElementById(`bak${idx}`);
+  if (!wrap || !bbl) return;
+
+  function setPos(pct) {
+    pct = Math.max(2, Math.min(98, pct));
+    bbl.style.width = pct + '%';
+    if (bal) bal.style.left = pct + '%';
+    if (bak) bak.style.left = pct + '%';
   }
 
-  /* =====================================================
-     FADE IN
-  ===================================================== */
-  const obs = new IntersectionObserver(e=>e.forEach(x=>{ if(x.isIntersecting) x.target.classList.add('vis'); }),{threshold:0.08});
-  document.querySelectorAll('.fu').forEach(el=>obs.observe(el));
+  function onMove(clientX) {
+    const r = wrap.getBoundingClientRect();
+    setPos(((clientX - r.left) / r.width) * 100);
+  }
 
-  /* =====================================================
-     BA SLIDER
-  ===================================================== */
-  function initBA(idx){
-    const wrap = document.getElementById('ba'+idx);
-    const bbl  = document.getElementById('bbl'+idx);
-    const line = document.getElementById('bal'+idx);
-    const knob = document.getElementById('bak'+idx);
-    if(!wrap) return;
-    let drag = false;
-    function pos(x){
+  wrap.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('ba-img-el')) return;
+    const mm = e2 => onMove(e2.clientX);
+    const mu = () => { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
+    document.addEventListener('mousemove', mm);
+    document.addEventListener('mouseup', mu);
+    onMove(e.clientX);
+  });
+
+  wrap.addEventListener('touchstart', e => {
+    const tm = e2 => onMove(e2.touches[0].clientX);
+    const te = () => { wrap.removeEventListener('touchmove', tm); wrap.removeEventListener('touchend', te); };
+    wrap.addEventListener('touchmove', tm, { passive: true });
+    wrap.addEventListener('touchend', te);
+    onMove(e.touches[0].clientX);
+  }, { passive: true });
+}
+
+/* ── Carrossel step / goto ─────────────────────────────────── */
+function crStep(idx, dir) {
+  const cr = document.getElementById(`cr${idx}`);
+  if (!cr) return;
+  const slides = cr.querySelectorAll('.cr-slide');
+  const dots   = cr.querySelectorAll('.cr-dot');
+  let current  = [...slides].findIndex(s => s.classList.contains('active'));
+  slides[current].classList.remove('active');
+  dots[current] && dots[current].classList.remove('active');
+  current = (current + dir + slides.length) % slides.length;
+  slides[current].classList.add('active');
+  dots[current] && dots[current].classList.add('active');
+}
+
+function crGoto(idx, i) {
+  const cr = document.getElementById(`cr${idx}`);
+  if (!cr) return;
+  const slides = cr.querySelectorAll('.cr-slide');
+  const dots   = cr.querySelectorAll('.cr-dot');
+  slides.forEach((s, n) => s.classList.toggle('active', n === i));
+  dots.forEach((d, n) => d.classList.toggle('active', n === i));
+}
+
+/* ── Slider BA estático (cards originais do HTML) ──────────── */
+function initStaticBA() {
+  [0, 1].forEach(idx => {
+    const wrap = document.getElementById(`ba${idx}`);
+    const bbl  = document.getElementById(`bbl${idx}`);
+    const bal  = document.getElementById(`bal${idx}`);
+    const bak  = document.getElementById(`bak${idx}`);
+    if (!wrap || !bbl) return;
+
+    function setPos(pct) {
+      pct = Math.max(2, Math.min(98, pct));
+      bbl.style.width = pct + '%';
+      if (bal) bal.style.left = pct + '%';
+      if (bak) bak.style.left = pct + '%';
+    }
+    function onMove(clientX) {
       const r = wrap.getBoundingClientRect();
-      let p = Math.min(Math.max((x-r.left)/r.width, 0.02), 0.98);
-      bbl.style.width = (p*100)+'%';
-      line.style.left = knob.style.left = (p*100)+'%';
+      setPos(((clientX - r.left) / r.width) * 100);
     }
-    knob.addEventListener('mousedown', e=>{ drag=true; e.preventDefault(); });
-    knob.addEventListener('touchstart', ()=>drag=true, {passive:true});
-    window.addEventListener('mousemove', e=>{ if(drag) pos(e.clientX); });
-    window.addEventListener('touchmove', e=>{ if(drag) pos(e.touches[0].clientX); },{passive:true});
-    window.addEventListener('mouseup',  ()=>drag=false);
-    window.addEventListener('touchend', ()=>drag=false);
-    wrap.addEventListener('click', e=>pos(e.clientX));
-  }
-  initBA(0); initBA(1);
+    wrap.addEventListener('mousedown', e => {
+      if (e.target.classList.contains('ba-img-el')) return;
+      const mm = e2 => onMove(e2.clientX);
+      const mu = () => { document.removeEventListener('mousemove', mm); document.removeEventListener('mouseup', mu); };
+      document.addEventListener('mousemove', mm);
+      document.addEventListener('mouseup', mu);
+      onMove(e.clientX);
+    });
+    wrap.addEventListener('touchstart', e => {
+      const tm = e2 => onMove(e2.touches[0].clientX);
+      const te = () => { wrap.removeEventListener('touchmove', tm); wrap.removeEventListener('touchend', te); };
+      wrap.addEventListener('touchmove', tm, { passive: true });
+      wrap.addEventListener('touchend', te);
+      onMove(e.touches[0].clientX);
+    }, { passive: true });
 
-  /* =====================================================
-     ACESSO RESTRITO — SÓ NO MEU APARELHO
-  ===================================================== */
-  const DEVICE_TOKEN_KEY   = 'hv_device_token';
-  const DEVICE_TOKEN_VALUE = 'hv_a7f3k9x2p1q8w5m4';
-  const SETUP_PARAM        = 'hvnt21291906';
-
-  (function checkSetup(){
-    const params = new URLSearchParams(window.location.search);
-    if(params.get('setup') === SETUP_PARAM){
-      localStorage.setItem(DEVICE_TOKEN_KEY, DEVICE_TOKEN_VALUE);
-      const url = new URL(window.location.href);
-      url.searchParams.delete('setup');
-      window.history.replaceState({}, '', url.toString());
-      alert('Aparelho autorizado com sucesso! O modo admin está disponível neste browser.');
-    }
-  })();
-
-  function isDeviceAuthorized(){
-    return localStorage.getItem(DEVICE_TOKEN_KEY) === DEVICE_TOKEN_VALUE;
-  }
-
-  let cliquesLogo = 0;
-  const logoHV = document.querySelector('.nav-logo');
-  logoHV.addEventListener('click', (e)=>{
-    e.preventDefault();
-    if(!isDeviceAuthorized()) return;
-    cliquesLogo++;
-    if(cliquesLogo === 5){
-      const acesso = prompt("Área Administrativa. Introduza a senha:");
-      if(acesso === "2103"){
-        document.body.classList.add('admin-mode');
-        alert("Modo Admin Ativo!");
-      } else {
-        alert("Senha incorreta.");
-      }
-      cliquesLogo = 0;
-    }
-    setTimeout(()=>{ cliquesLogo = 0; }, 3000);
+    // Lightbox nas imagens estáticas
+    wrap.querySelectorAll('.ba-img-el').forEach(img => {
+      img.addEventListener('click', () => { if (img.src) openLightbox(img.src); });
+    });
   });
+}
 
-  /* =====================================================
-     FILTER
-  ===================================================== */
-  function filterP(cat, btn){
-    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.proj-card[data-cat]').forEach(c=>{
-      c.style.display = (cat==='todos' || c.dataset.cat===cat) ? 'block' : 'none';
-    });
+/* ── Filtro de categorias ──────────────────────────────────── */
+function filterP(cat, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('#pgrid .proj-card').forEach(c => {
+    c.style.display = (cat === 'todos' || c.dataset.cat === cat) ? '' : 'none';
+  });
+}
+
+/* ── Lightbox ──────────────────────────────────────────────── */
+function openLightbox(src) {
+  const ov  = document.getElementById('lightbox');
+  const img = document.getElementById('lightbox-img');
+  if (!ov || !img || !src) return;
+  img.src = src;
+  ov.classList.add('open');
+}
+function closeLightbox() {
+  const ov = document.getElementById('lightbox');
+  if (ov) ov.classList.remove('open');
+}
+
+/* ── Modal admin ───────────────────────────────────────────── */
+function openModal() {
+  if (!document.body.classList.contains('admin-mode')) {
+    const pw = prompt('Senha de administrador:');
+    if (pw !== ADMIN_PASSWORD) { alert('Senha incorreta.'); return; }
+    document.body.classList.add('admin-mode');
   }
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
 
-  /* =====================================================
-     MODAL
-  ===================================================== */
-  let imgB=null, imgA=null, extraImgs=[];
+// Previsualiza imagem no modal
+function prevImg(input, slot, uzId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const uz = document.getElementById(uzId);
+    uz.classList.add('done');
+    uz.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;"/>`;
+    uz.dataset[slot] = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  if (slot === 'b') window._beforeDataUrl = URL.createObjectURL(file);
+  if (slot === 'a') window._afterDataUrl  = URL.createObjectURL(file);
+}
 
-  function openModal(){ document.getElementById('modal').classList.add('open'); }
-
-  function closeModal(){
-    document.getElementById('modal').classList.remove('open');
-    imgB=imgA=null; extraImgs=[];
-    resetUZ('uz-b','📷','Foto ANTES');
-    resetUZ('uz-a','✨','Foto DEPOIS');
-    ['pname','ploc','pdur'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('extra-thumbs').innerHTML='';
-    document.getElementById('peditid').value='';
-    document.getElementById('modal-title').textContent='Adicionar Projeto';
-    document.getElementById('modal-sub').textContent='Carregue a foto antes/depois e, se quiser, adicione fotos extra do projeto.';
-    document.getElementById('mbtn-save').textContent='Adicionar ao Site';
-    const addBtn=document.getElementById('uz-extra-add');
-    if(addBtn) addBtn.style.display='';
-  }
-
-  function resetUZ(id,ico,lbl){
-    const z=document.getElementById(id);
-    z.classList.remove('done');
-    z.querySelector('.uz-ico').textContent=ico;
-    z.querySelector('.uz-lbl').textContent=lbl;
-  }
-
-  function prevImg(inp, side, zid){
-    const f=inp.files[0]; if(!f) return;
-    const z=document.getElementById(zid);
-    z.classList.add('done');
-    z.querySelector('.uz-ico').textContent='✅';
-    z.querySelector('.uz-lbl').textContent=f.name.length>18?f.name.substring(0,18)+'…':f.name;
-    const r=new FileReader();
-    r.onload=e=>{ if(side==='b') imgB=e.target.result; else imgA=e.target.result; };
-    r.readAsDataURL(f);
-  }
-
-  function addExtraImgs(inp){
-    const files=Array.from(inp.files);
-    const thumbsEl=document.getElementById('extra-thumbs');
-    files.forEach(f=>{
-      if(extraImgs.length>=6) return;
-      const r=new FileReader();
-      r.onload=e=>{
-        extraImgs.push(e.target.result);
-        const i=extraImgs.length-1;
-        const th=document.createElement('div');
-        th.className='extra-thumb'; th.dataset.idx=i;
-        th.innerHTML='<img src="'+e.target.result+'" alt="foto extra"/><button class="extra-thumb-rm" onclick="removeExtra('+i+')">✕</button>';
-        thumbsEl.appendChild(th);
-        if(extraImgs.length>=6){ const a=document.getElementById('uz-extra-add'); if(a) a.style.display='none'; }
-      };
-      r.readAsDataURL(f);
-    });
-    inp.value='';
-  }
-
-  function removeExtra(idx){
-    extraImgs.splice(idx,1);
-    const thumbsEl=document.getElementById('extra-thumbs');
-    thumbsEl.innerHTML='';
-    extraImgs.forEach((src,i)=>{
-      const th=document.createElement('div');
-      th.className='extra-thumb'; th.dataset.idx=i;
-      th.innerHTML='<img src="'+src+'" alt="foto extra"/><button class="extra-thumb-rm" onclick="removeExtra('+i+')">✕</button>';
-      thumbsEl.appendChild(th);
-    });
-    const addBtn=document.getElementById('uz-extra-add');
-    if(addBtn) addBtn.style.display='';
-  }
-
-  /* =====================================================
-     ABRIR MODAL DE EDIÇÃO
-  ===================================================== */
-  function openEditModal(proj, cardEl){
-    // Preencher campos com dados atuais
-    document.getElementById('pname').value = proj.name || '';
-    document.getElementById('ploc').value  = proj.loc  || '';
-    document.getElementById('pdur').value  = proj.dur  || '';
-    document.getElementById('pcat').value  = proj.cat  || 'outros';
-    document.getElementById('peditid').value = proj.id;
-
-    // Carregar fotos atuais
-    imgB = proj.img_before || null;
-    imgA = proj.img_after  || null;
-    extraImgs = proj.extra_imgs ? JSON.parse(proj.extra_imgs) : [];
-
-    // Mostrar estado das fotos nos botões
-    if(imgB){ const z=document.getElementById('uz-b'); z.classList.add('done'); z.querySelector('.uz-ico').textContent='✅'; z.querySelector('.uz-lbl').textContent='Foto carregada'; }
-    if(imgA){ const z=document.getElementById('uz-a'); z.classList.add('done'); z.querySelector('.uz-ico').textContent='✅'; z.querySelector('.uz-lbl').textContent='Foto carregada'; }
-
-    // Mostrar miniaturas das fotos extra
-    const thumbsEl=document.getElementById('extra-thumbs');
-    thumbsEl.innerHTML='';
-    extraImgs.forEach((src,i)=>{
-      const th=document.createElement('div');
-      th.className='extra-thumb'; th.dataset.idx=i;
-      th.innerHTML='<img src="'+src+'" alt="foto extra"/><button class="extra-thumb-rm" onclick="removeExtra('+i+')">✕</button>';
-      thumbsEl.appendChild(th);
-    });
-    if(extraImgs.length>=6){ const a=document.getElementById('uz-extra-add'); if(a) a.style.display='none'; }
-
-    // Atualizar título e botão do modal
-    document.getElementById('modal-title').textContent = 'Editar Projeto';
-    document.getElementById('modal-sub').textContent   = 'Altere os dados ou fotos e clique em Guardar.';
-    document.getElementById('mbtn-save').textContent   = 'Guardar Alterações';
-
-    // Guardar referência ao card para atualizar depois
-    document.getElementById('modal').dataset.editCard = cardEl ? cardEl.dataset.dbid : '';
-
-    document.getElementById('modal').classList.add('open');
-  }
-
-  /* =====================================================
-     GUARDAR PROJETO — SUPABASE (ADICIONAR OU EDITAR)
-  ===================================================== */
-  async function saveProj(){
-    const btn = document.getElementById('mbtn-save');
-    const editId = document.getElementById('peditid').value;
-    btn.textContent = editId ? 'A guardar...' : 'A adicionar...';
-    btn.disabled = true;
-
-    const name = document.getElementById('pname').value || 'Novo Projeto';
-    const loc  = document.getElementById('ploc').value  || 'Portugal';
-    const dur  = document.getElementById('pdur').value  || '—';
-    const cat  = document.getElementById('pcat').value;
-
-    const data = {
-      name, loc, dur, cat,
-      img_before: imgB || null,
-      img_after:  imgA || null,
-      extra_imgs: JSON.stringify(extraImgs)
+// Fotos extra no modal
+let _extraFiles = [];
+function addExtraImgs(input) {
+  const thumbs = document.getElementById('extra-thumbs');
+  Array.from(input.files).forEach(file => {
+    if (_extraFiles.length >= 6) return;
+    _extraFiles.push(file);
+    const reader = new FileReader();
+    reader.onload = e => {
+      const div = document.createElement('div');
+      div.className = 'extra-thumb';
+      const idx = _extraFiles.length - 1;
+      div.innerHTML = `<img src="${e.target.result}"><button class="extra-thumb-rm" onclick="removeExtra(${idx},this)">✕</button>`;
+      thumbs.appendChild(div);
     };
-
-    if(editId){
-      // EDITAR — PATCH
-      const result = await supaFetch('PATCH', '/rest/v1/projetos?id=eq.'+editId, data);
-      btn.textContent = 'Guardar Alterações';
-      btn.disabled = false;
-
-      // Remover o card antigo e re-renderizar com dados novos
-      const oldCard = document.querySelector('.proj-card[data-dbid="'+editId+'"]');
-      if(oldCard){
-        const placeholder = document.createElement('div');
-        oldCard.parentNode.insertBefore(placeholder, oldCard);
-        oldCard.remove();
-        const updatedProj = Object.assign({ id: parseInt(editId) }, data);
-        renderCardAt(updatedProj, placeholder);
-        placeholder.remove();
-      }
-      closeModal();
-    } else {
-      // ADICIONAR — POST
-      const result = await supaFetch('POST', '/rest/v1/projetos', data);
-      btn.textContent = 'Adicionar ao Site';
-      btn.disabled = false;
-      if(!result){ alert('Erro ao guardar. Tente novamente.'); return; }
-      const proj = Array.isArray(result) ? result[0] : result;
-      renderCard(proj);
-      closeModal();
-    }
-  }
-
-  /* =====================================================
-     REMOVER PROJETO — SUPABASE
-  ===================================================== */
-  async function deleteProj(id, cardEl){
-    if(!confirm('Remover este projeto permanentemente?')) return;
-    await supaFetch('DELETE', '/rest/v1/projetos?id=eq.'+id, null);
-    cardEl.remove();
-  }
-
-  /* =====================================================
-     RENDERIZAR CARD
-  ===================================================== */
-  let pc = 100;
-
-  function buildCardHTML(proj, idx){
-    const extras = proj.extra_imgs ? JSON.parse(proj.extra_imgs) : [];
-    const labels = {sala:'Sala',cozinha:'Cozinha',banho:'Casa de Banho',exterior:'Exterior',outros:'Outros'};
-
-    const bHTML = proj.img_before
-      ? '<img class="ba-img-el" src="'+proj.img_before+'" alt="antes"/>'
-      : '<div class="ph-box ph-b"><div class="ph-ico">🏗️</div><div class="ph-txt">Antes</div></div>';
-    const aHTML = proj.img_after
-      ? '<img class="ba-img-el" src="'+proj.img_after+'" alt="depois"/>'
-      : '<div class="ph-box ph-a"><div class="ph-ico">✨</div><div class="ph-txt">Depois</div></div>';
-
-    let carouselHTML = '';
-    if(extras.length > 0){
-      const slidesHTML = extras.map((src,i)=>'<div class="cr-slide'+(i===0?' active':'')+'" data-si="'+i+'"><img src="'+src+'" alt="foto '+(i+1)+'"/></div>').join('');
-      const dotsHTML   = extras.length>1 ? '<div class="cr-dots">'+extras.map((_,i)=>'<span class="cr-dot'+(i===0?' active':'')+'" onclick="crGo(\'cr'+idx+'\','+i+')"></span>').join('')+'</div>' : '';
-      carouselHTML = '<div class="cr-wrap" id="cr'+idx+'"><div class="cr-label">Galeria de fotos</div><div class="cr-track">'+slidesHTML+'</div>'+(extras.length>1?'<button class="cr-btn cr-prev" onclick="crStep(\'cr'+idx+'\',-1)">&#8249;</button><button class="cr-btn cr-next" onclick="crStep(\'cr'+idx+'\',1)">&#8250;</button>':'')+dotsHTML+'</div>';
-    }
-
-    const adminBtns =
-      '<div class="admin-btns admin-only">'+
-        '<button class="btn-edit-proj" onclick="openEditModal('+JSON.stringify(proj).replace(/"/g,'&quot;')+', this.closest(\'.proj-card\'))">✏️ Editar</button>'+
-        '<button class="btn-remove-proj" onclick="deleteProj('+proj.id+', this.closest(\'.proj-card\'))">🗑 Remover</button>'+
-      '</div>';
-
-    return '<div class="proj-head"><span class="proj-title">'+proj.name+'</span><span class="proj-badge">'+(labels[proj.cat]||proj.cat)+'</span></div>'+
-      '<div class="ba-wrap" id="ba'+idx+'">'+
-        '<div class="ba-after-layer">'+aHTML+'</div>'+
-        '<div class="ba-before-layer" id="bbl'+idx+'" style="width:50%"><div class="ba-before-inner">'+bHTML+'</div></div>'+
-        '<div class="ba-lbl lbl-before">Antes</div><div class="ba-lbl lbl-after">Depois</div>'+
-        '<div class="ba-line" id="bal'+idx+'"></div>'+
-        '<div class="ba-knob" id="bak'+idx+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 12H16M8 12L5 9M8 12L5 15M16 12L19 9M16 12L19 15"/></svg></div>'+
-      '</div>'+
-      carouselHTML+
-      '<div class="proj-foot">'+
-        '<div class="proj-foot-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+proj.dur+'</div>'+
-        '<div class="proj-foot-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'+proj.loc+'</div>'+
-      '</div>'+
-      adminBtns;
-  }
-
-  function renderCard(proj){
-    const idx = pc++;
-    const card = document.createElement('div');
-    card.className = 'proj-card';
-    card.dataset.cat = proj.cat;
-    card.dataset.dbid = proj.id;
-    card.innerHTML = buildCardHTML(proj, idx);
-    document.getElementById('pgrid').insertBefore(card, document.getElementById('add-card'));
-    initBA(idx);
-  }
-
-  function renderCardAt(proj, refEl){
-    const idx = pc++;
-    const card = document.createElement('div');
-    card.className = 'proj-card';
-    card.dataset.cat = proj.cat;
-    card.dataset.dbid = proj.id;
-    card.innerHTML = buildCardHTML(proj, idx);
-    refEl.parentNode.insertBefore(card, refEl);
-    initBA(idx);
-  }
-
-  /* =====================================================
-     CARREGAR PROJETOS AO ABRIR O SITE
-  ===================================================== */
-  async function loadProjects(){
-    const data = await supaFetch('GET', '/rest/v1/projetos?select=*&order=id.asc', null);
-    if(!data) return;
-    data.forEach(proj => renderCard(proj));
-  }
-
-  document.addEventListener('DOMContentLoaded', loadProjects);
-  document.getElementById('modal').addEventListener('click',function(e){ if(e.target===this) closeModal(); });
-
-  /* =====================================================
-     CAROUSEL
-  ===================================================== */
-  function crGo(crid, toIdx){
-    const wrap=document.getElementById(crid); if(!wrap) return;
-    wrap.querySelectorAll('.cr-slide').forEach((s,i)=>s.classList.toggle('active',i===toIdx));
-    wrap.querySelectorAll('.cr-dot').forEach((d,i)=>d.classList.toggle('active',i===toIdx));
-  }
-  function crStep(crid, dir){
-    const wrap=document.getElementById(crid); if(!wrap) return;
-    const slides=wrap.querySelectorAll('.cr-slide');
-    let cur=0; slides.forEach((s,i)=>{ if(s.classList.contains('active')) cur=i; });
-    crGo(crid,(cur+dir+slides.length)%slides.length);
-  }
-
-  /* =====================================================
-     LIGHTBOX
-  ===================================================== */
-  function openLightbox(src){
-    document.getElementById('lightbox-img').src = src;
-    document.getElementById('lightbox').classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeLightbox(){
-    document.getElementById('lightbox').classList.remove('open');
-    document.getElementById('lightbox-img').src = '';
-    document.body.style.overflow = '';
-  }
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeLightbox(); });
-
-  // Delegar cliques nas fotos dos cards para abrir lightbox
-  document.addEventListener('click', e=>{
-    const img = e.target.closest('.ba-img-el, .cr-slide img');
-    if(img && img.src) openLightbox(img.src);
+    reader.readAsDataURL(file);
   });
+}
+function removeExtra(idx, btn) {
+  _extraFiles.splice(idx, 1);
+  btn.closest('.extra-thumb').remove();
+}
 
-  /* =====================================================
-     FORM CONTACTO
-  ===================================================== */
-  function submitForm(e){
-    e.preventDefault();
-    const form=e.target;
-    const successMsg=document.getElementById('fsuccess');
-    fetch(form.action,{
-      method:"POST",
-      body:new FormData(form),
-      headers:{'Accept':'application/json'}
+// Guarda projeto (apenas localmente na sessão — para guardar permanentemente precisa do GitHub)
+function saveProj() {
+  alert('Para guardar permanentemente, faz upload das fotos para a pasta images/ do GitHub com o nome:\nprojetoX-antes.JPG\nprojetoX-depois.JPG\nprojetoX-extra1.JPG\n\nO site carrega automaticamente ao abrir.');
+  closeModal();
+}
+
+function editProj(prefix) {
+  alert(`Para editar o projeto "${prefix}", substitui as fotos na pasta images/ do GitHub.`);
+}
+
+function removeProj(btn) {
+  if (!confirm('Remover este projeto da vista? (as fotos continuam no GitHub)')) return;
+  btn.closest('.proj-card').remove();
+}
+
+/* ── Formulário de contacto ────────────────────────────────── */
+function submitForm(e) {
+  e.preventDefault();
+  const form    = document.getElementById('cform');
+  const success = document.getElementById('fsuccess');
+  fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'Accept': 'application/json' } })
+    .then(r => {
+      if (r.ok) { form.style.display = 'none'; success.style.display = 'block'; }
+      else alert('Erro ao enviar. Tente novamente.');
     })
-    .then(r=>{ if(r.ok){ form.style.display='none'; successMsg.style.display='block'; } else alert("Houve um erro ao enviar."); })
-    .catch(()=>alert("Erro de ligação."));
-  }
+    .catch(() => alert('Erro de rede. Tente novamente.'));
+}
+
+/* ── Fade-in ao scroll ─────────────────────────────────────── */
+function initFU() {
+  const els = document.querySelectorAll('.fu');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  els.forEach(el => obs.observe(el));
+}
+
+/* ── Init ──────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  initStaticBA();
+  loadProjects();
+  initFU();
+
+  // Fechar lightbox com ESC
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+});
